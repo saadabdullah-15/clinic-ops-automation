@@ -7,6 +7,10 @@ Small, useful ops tools for a physiotherapy clinic:
 - ✅ Schema constraints and validation to protect data quality
 
 ![Demo](assets/demo.gif)
+*If the GIF does not load on GitHub, open `assets/demo.gif` directly.*
+
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
@@ -28,21 +32,22 @@ Small, useful ops tools for a physiotherapy clinic:
 - [Project Structure](#project-structure)
 - [Tech Stack](#tech-stack)
 - [Notes](#notes)
+- [License](#license)
 
 ---
 
 ## Features
 
-### 01_kpi_dashboard — realtime KPIs
-ETL + SQLite + Streamlit for daily clinic health: bookings, show rate, cancellations, revenue (estimate vs paid), and utilization per physio. Supports daily drops under `data/daily/` with an idempotent refresh that replaces one day and logs runs to `etl_runs`.
+### 01_kpi_dashboard - realtime KPIs
+ETL + SQLite + Streamlit for daily clinic health: bookings, show rate, cancellations, revenue (estimate vs paid), and utilization per physio. Supports daily drops under `data/daily/` with an idempotent refresh that replaces a single day and logs runs to `etl_runs`.
 
-### 02_reception_automation — reception copilot
-Builds a next-day callback list with flags (new patient, missing phone or consent) and a priority score combining model risk, data completeness, and timing. Generates local “emails” in `outbox/` and serves `/priorities` via Flask.
+### 02_reception_automation - reception copilot
+Builds a next-day callback list with flags (new patient, missing phone or consent) and a priority score combining model risk, data completeness, and timing. Generates local emails in `outbox/` and serves `/priorities` via Flask.
 
-### 03_cancellation_model — risk scoring
-Predictive baseline (logistic or random forest) using appointment context and patient history. Outputs `cancellation_scores.csv` per day and a combined file. Writes ROC AUC, average precision, and precision@k to `03_cancellation_model/metrics.json`.
+### 03_cancellation_model - risk scoring
+Predictive baseline (logistic regression or random forest) using appointment context and patient history. Outputs `cancellation_scores.csv` per day and a combined file. Writes ROC AUC, average precision, and precision at k to `03_cancellation_model/metrics.json`.
 
-### 04_schema_validation — database rigor
+### 04_schema_validation - database rigor
 Migration to a stricter schema (constraints, indices, triggers). Fast validator that checks invalid statuses, orphan records, overlaps, and payment sanity. Use it to gate scheduled refreshes.
 
 ---
@@ -51,39 +56,33 @@ Migration to a stricter schema (constraints, indices, triggers). Fast validator 
 
 ```mermaid
 flowchart LR
-  %% --- Subgraphs ---
   subgraph Data
-    direction LR
-    RAW["CSV: data/raw/*"]:::file
-    DAILY["Daily drops: data/daily/YYYY-MM-DD/*"]:::file
+    RAW[CSV: data/raw/*]:::file
+    DAILY[Daily drops: data/daily/YYYY-MM-DD/*]:::file
   end
 
-  subgraph Model
-    direction LR
-    MTRAIN["train.py"]:::svc
-    MSCORE["score.py"]:::svc
-    MSCORES["cancellation_scores.csv"]:::file
-  end
-
-  subgraph Database
+  subgraph DB
     DB[(SQLite: clinic.db)]:::db
   end
 
-  subgraph Reception
-    direction LR
-    PRI["priorities_YYYY-MM-DD.csv"]:::file
-    OUTBOX["outbox/*.txt"]:::file
-    API["/priorities?day=YYYY-MM-DD"]:::svc
-  end
-
   subgraph KPI
-    ST["Streamlit Dashboard"]:::svc
+    ST[Streamlit Dashboard]:::svc
   end
 
-  %% --- Flows ---
+  subgraph Reception
+    PRI[priorities_YYYY-MM-DD.csv]:::file
+    OUTBOX[outbox/*.txt]:::file
+    API[/priorities?day=YYYY-MM-DD]:::svc
+  end
+
+  subgraph Model
+    MTRAIN[train.py]:::svc
+    MSCORE[score.py]:::svc
+    MSCORES[cancellation_scores.csv]:::file
+  end
+
   RAW -->|etl/load.py| DB
   DAILY -->|etl/refresh_daily.py| DB
-
   DB -->|SQL| ST
 
   DB -->|build_priorities.py| PRI
@@ -94,13 +93,9 @@ flowchart LR
   MSCORE --> MSCORES
   MSCORES --> DAILY
 
-  %% --- Styling ---
   classDef db fill:#d8f0ff,stroke:#0b64c0;
   classDef svc fill:#eef7e9,stroke:#3b7c2a;
   classDef file fill:#f8f8f8,stroke:#999;
-
-
-
 ```
 
 ---
@@ -108,15 +103,15 @@ flowchart LR
 ## Quick Start
 
 ```bash
-# 1) Generate mock data and load initial DB
-python -m common.generate_mock_data
-python -m 01_kpi_dashboard.etl.load
+# 1) Generate mock data and load the initial DB
+python common/generate_mock_data.py
+python 01_kpi_dashboard/etl/load.py
 
 # 2) Create a daily snapshot and refresh that day
-python -m common.make_daily_from_raw --day YYYY-MM-DD
-python -m 01_kpi_dashboard.etl.refresh_daily --day YYYY-MM-DD
+python common/make_daily_from_raw.py --day YYYY-MM-DD
+python 01_kpi_dashboard/etl/refresh_daily.py --day YYYY-MM-DD
 
-# 3) Launch dashboard
+# 3) Launch the dashboard
 python -m streamlit run 01_kpi_dashboard/app.py
 ```
 
@@ -124,46 +119,35 @@ python -m streamlit run 01_kpi_dashboard/app.py
 
 ## Module Usage
 
-### KPIs
+### KPIs - run in 3 commands
 ```bash
-python -m common.generate_mock_data
-python -m 01_kpi_dashboard.etl.load
+python common/generate_mock_data.py
+python 01_kpi_dashboard/etl/load.py
 python -m streamlit run 01_kpi_dashboard/app.py
 ```
 
-### Reception automation
+### Reception automation - run in 3 commands
 ```bash
-# Build priorities for a day
-python -m 02_reception_automation.build_priorities --day 2025-09-05
-
-# Send reminders to local outbox
-python -m 02_reception_automation.send_reminders --day 2025-09-05
-python -m 02_reception_automation.send_reminders --day 2025-09-05 --dry-run  # preview
-
-# Serve priorities as JSON
-python -m 02_reception_automation.server
-# http://127.0.0.1:8008/priorities?day=2025-09-05
+python 02_reception_automation/build_priorities.py --day 2025-09-05
+python 02_reception_automation/send_reminders.py --day 2025-09-05
+python 02_reception_automation/server.py
+# open: http://127.0.0.1:8008/priorities?day=2025-09-05
 ```
 
-### Cancellation model
+### Cancellation model - run in 3 commands
 ```bash
-# Train and write metrics.json and model.joblib
 python 03_cancellation_model/train.py --valid-days 7
-
-# Score a target day and export cancellation_scores.csv
 python 03_cancellation_model/score.py --day 2025-09-05
-
-# Rebuild priorities to include real risk scores
-python -m 02_reception_automation.build_priorities --day 2025-09-05
+python 02_reception_automation/build_priorities.py --day 2025-09-05
 ```
 
 ### Schema and validation
 ```bash
-# Migrate to stricter schema
+# migrate to stricter schema
 python 01_kpi_dashboard/etl/migrate_v2_sqlite.py
 
-# Validate before refresh
-python -m 04_schema_validation.validate_data
+# validate before refresh
+python 04_schema_validation/validate_data.py
 ```
 
 Windows scheduled refresh example:
@@ -171,8 +155,8 @@ Windows scheduled refresh example:
 @echo off
 set ROOT=%~dp0..
 call "%ROOT%\.venv\Scripts\activate"
-python -m 04_schema_validation.validate_data || exit /b 1
-python -m 01_kpi_dashboard.etl.refresh_daily
+python "%ROOT%\04_schema_validation\validate_data.py" || exit /b 1
+python "%ROOT%\01_kpi_dashboard\etl\refresh_daily.py"
 ```
 
 ---
@@ -184,14 +168,21 @@ Create `.env` from `.env.example`:
 DATABASE_URL=sqlite:///clinic.db
 EMAIL_OUTBOX_DIR=outbox
 ```
-Switch to Postgres by setting `DATABASE_URL=postgresql+psycopg2://user:pass@host:5432/dbname`.
+
+Switch to Postgres:
+```bash
+pip install psycopg2-binary
+# then set
+# DATABASE_URL=postgresql+psycopg2://user:pass@host:5432/dbname
+```
 
 ---
 
 ## API
 
-`GET /priorities?day=YYYY-MM-DD` returns:
+`GET /priorities?day=YYYY-MM-DD`
 
+**Response 200**
 ```json
 {
   "day": "2025-09-05",
@@ -215,6 +206,29 @@ Switch to Postgres by setting `DATABASE_URL=postgresql+psycopg2://user:pass@host
   ]
 }
 ```
+
+**Fields**
+| Field | Type | Notes |
+|------|------|-------|
+| `day` | string (date) | Requested day |
+| `count` | integer | Number of items |
+| `appointment_id` | integer | Unique appointment id |
+| `patient_id` | integer | Unique patient id |
+| `patient_name` | string | Full name |
+| `phone` | string | May be empty |
+| `consent_form_received` | integer {0,1} | 1 means consent on file |
+| `physio_name` | string | Treating physio |
+| `appt_start` | ISO datetime | Appointment start time |
+| `is_new_patient` | boolean | True if first visit before this day |
+| `risk_bucket` | enum {low, medium, high} | Derived from risk score |
+| `missing_phone` | boolean | Data quality flag |
+| `missing_consent` | boolean | Data quality flag |
+| `priority_score` | number | Higher means earlier follow-up |
+| `priority_reason` | string | Human readable reasons |
+
+**Errors**
+- 400 invalid or missing day parameter
+- 200 with `count: 0` when no priorities exist for the day
 
 ---
 
@@ -270,4 +284,9 @@ clinic-ops-automation/
 ## Notes
 - All data in this repo is synthetic. The outbox creates local text files, not real emails.
 - Metrics are written to `03_cancellation_model/metrics.json`. Use `scripts/report.py` to print a snapshot.
-- For imports on Windows use `python -m ...` form to avoid module path issues.
+- On Windows prefer `python script.py` over `python -m package.module` for numbered folders.
+
+---
+
+## License
+MIT

@@ -1,0 +1,18 @@
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+# Enable common rules: pyflakes/pycodestyle, flake8-bugbear, pyupgrade, isort, flake8-simplify
+lint.select = ["E", "F", "B", "UP", "I", "SIM"]
+lint.ignore = [
+  "E203",  # whitespace before ':' (Black compatible)
+  "E501",  # line length (Black enforces)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["common", "01_kpi_dashboard", "02_reception_automation", "03_cancellation_model", "04_schema_validation"]
+force-single-line = false
+combine-as-imports = true
