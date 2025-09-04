@@ -48,6 +48,7 @@ def priorities():
         "physio_name",
         "appt_start",
         "is_new_patient",
+        "risk_score",  # ✅ added
         "risk_bucket",
         "missing_phone",
         "missing_consent",

@@ -7,16 +7,17 @@ Includes KPI dashboards, reception workflow automation, and a cancellation risk 
 
 ## Contents
 
-- [Features](#features)  
-- [Progress by Day](#progress-by-day)  
-- [Project Structure](#project-structure)  
-- [Quick Start](#quick-start)  
-- [Refresh Flow](#refresh-flow-daily)  
-- [Optional Auto Refresh on Windows](#optional-auto-refresh-on-windows)  
-- [Environment Variables](#environment-variables)  
-- [Tech Stack](#tech-stack)  
-- [Reception Automation Usage](#reception-automation-usage)  
-- [Screenshots](#screenshots)
+* [Features](#features)
+* [Progress by Day](#progress-by-day)
+* [Project Structure](#project-structure)
+* [Quick Start](#quick-start)
+* [Refresh Flow](#refresh-flow-daily)
+* [Optional Auto Refresh on Windows](#optional-auto-refresh-on-windows)
+* [Environment Variables](#environment-variables)
+* [Tech Stack](#tech-stack)
+* [Reception Automation Usage](#reception-automation-usage)
+* [Cancellation Model Usage](#cancellation-model-usage)
+* [Screenshots](#screenshots)
 
 ---
 
@@ -24,31 +25,33 @@ Includes KPI dashboards, reception workflow automation, and a cancellation risk 
 
 ### 01_kpi_dashboard (Day 1 to 3)
 
-- ETL pipeline to load mock patient, appointment, and payment data  
-- Realtime KPIs in Streamlit: bookings, cancellations, show rate, revenue  
-- Daily refresh job from `data/daily/`  
-- Sidebar controls: date picker, last refresh info, refresh cache button  
-- Extra KPIs: revenue estimate vs paid, utilization percent per physio
+* ETL pipeline to load mock patient, appointment, and payment data
+* Realtime KPIs in Streamlit: bookings, cancellations, show rate, revenue
+* Daily refresh job from `data/daily/`
+* Sidebar controls: date picker, last refresh info, refresh cache button
+* Extra KPIs: revenue estimate vs paid, utilization percent per physio
 
 ### 02_reception_automation (Day 4 to 5)
 
-- Build priorities CSV with flags: new patient, missing phone or consent, risk score  
-- Generate local outbox reminder “emails”  
-- Tiny Flask API to serve `/priorities` as JSON for the reception screen
+* Build priorities CSV with flags: new patient, missing phone or consent, risk score
+* Generate local outbox reminder “emails”
+* Tiny Flask API to serve `/priorities` as JSON for the reception screen
 
-### 03_cancellation_model (Day 6 to 7, planned)
+### 03_cancellation_model (Day 6 to 7)
 
-- Baseline model to predict no show or cancellation risk  
-- Export `cancellation_scores.csv`
+* Train a predictive model on historical appointment data
+* Exports cancellation risk scores (`cancellation_scores.csv`)
+* Integrated with priorities builder so reception can see risk bucket (low/medium/high)
+* Optional: switched to **RandomForestClassifier**, feature importances saved, and dynamic threshold for “high risk”
 
 ---
 
 ## Progress by Day
 
-- ✅ Day 1: Repo setup, environment, mock data generator, schema, dashboard skeleton  
-- ✅ Day 2 to 3: Realtime KPI plumbing, refresh job, sidebar controls, utilization and revenue KPIs  
-- ✅ Day 4 to 5: Reception automation, priorities CSV, outbox reminders, Flask API  
-- 🚧 Day 6 to 7 next: Cancellation model, train baseline, export risk scores, integrate into priorities
+* ✅ Day 1: Repo setup, environment, mock data generator, schema, dashboard skeleton
+* ✅ Day 2 to 3: Realtime KPI plumbing, refresh job, sidebar controls, utilization and revenue KPIs
+* ✅ Day 4 to 5: Reception automation, priorities CSV, outbox reminders, Flask API
+* ✅ Day 6 to 7: Cancellation model, trained + exported scores, integrated into priorities (with RandomForest + feature importances + high risk threshold)
 
 ---
 
@@ -68,6 +71,10 @@ clinic-ops-automation/
 │   ├── send_reminders.py    # Generate local reminder "emails"
 │   └── server.py            # Tiny Flask API for priorities
 ├── 03_cancellation_model/
+│   ├── __init__.py
+│   ├── features.py          # Feature engineering
+│   ├── train.py             # Train model + metrics
+│   └── score.py             # Score appointments for a given day
 ├── common/
 │   ├── db.py                # DB connection helper
 │   ├── generate_mock_data.py
@@ -127,7 +134,7 @@ Create `scripts/run_refresh.bat`:
 ```bat
 @echo off
 set ROOT=%~dp0..
-call "%ROOT%\.venv\Scriptsctivate"
+call "%ROOT%\.venv\Scripts\activate"
 python -m 01_kpi_dashboard.etl.refresh_daily
 ```
 
@@ -158,9 +165,9 @@ EMAIL_OUTBOX_DIR=outbox
 
 ## Tech Stack
 
-- **Python**: pandas, numpy, SQLAlchemy, scikit-learn, Streamlit, Flask, python-dotenv  
-- **Database**: SQLite by default. You can switch to Postgres by updating `DATABASE_URL`.  
-- **Task scheduling**: Windows Task Scheduler for optional auto refresh
+* **Python**: pandas, numpy, SQLAlchemy, scikit-learn, Streamlit, Flask, python-dotenv
+* **Database**: SQLite by default. You can switch to Postgres by updating `DATABASE_URL`.
+* **Task scheduling**: Windows Task Scheduler for optional auto refresh
 
 ---
 
@@ -191,10 +198,41 @@ python -m 02_reception_automation.server
 
 ---
 
+## Cancellation Model Usage
+
+Train the model:
+
+```bash
+python 03_cancellation_model/train.py --valid-days 7
+```
+
+Score a specific day:
+
+```bash
+python 03_cancellation_model/score.py --day 2025-09-05
+```
+
+Rebuild priorities to pull in real risk scores:
+
+```bash
+python 02_reception_automation/build_priorities.py --day 2025-09-05
+```
+
+Outputs:
+
+* `03_cancellation_model/model.joblib` → trained model
+* `03_cancellation_model/metrics.json` → metrics, feature importances, high risk threshold
+* `data/daily/<DATE>/cancellation_scores.csv` → risk scores for that day
+* `03_cancellation_model/cancellation_scores.csv` → combined history
+
+---
+
 ## Screenshots
 
-- 📊 KPI Dashboard  
-- 📋 Priorities JSON API  
-- 📧 Outbox Reminder Example
+* 📊 KPI Dashboard
+* 📋 Priorities JSON API
+* 📧 Outbox Reminder Example
 
-> Add images under `assets/` and reference them here when available.
+(Add screenshots in `assets/` as needed)
+
+---

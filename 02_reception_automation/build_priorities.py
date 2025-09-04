@@ -1,15 +1,17 @@
 import sys
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parents[2]))
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 import argparse, os
+from pathlib import Path
 from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 from sqlalchemy import text
 from common.db import engine
 import pytz
+
 
 BERLIN = pytz.timezone("Europe/Berlin")
 

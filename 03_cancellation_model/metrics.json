@@ -1,0 +1,31 @@
+{
+  "n_train": 402,
+  "n_valid": 163,
+  "pos_rate_valid": 0.25153374233128833,
+  "roc_auc": 0.4238304678128748,
+  "avg_precision": 0.253213377734218,
+  "p_at_10": 0.3,
+  "p_at_20pct": 0.21212121212121213,
+  "cutoff_date": "2025-08-29",
+  "last_day": "2025-09-04",
+  "features": [
+    "days_since_booking",
+    "hour",
+    "weekday",
+    "is_new_patient",
+    "noshow_rate_prior",
+    "price_estimate",
+    "is_rainy"
+  ],
+  "model": "random_forest_balanced",
+  "high_risk_threshold": 0.195,
+  "feature_importances": {
+    "days_since_booking": 0.30722074682643524,
+    "hour": 0.21756518143801418,
+    "weekday": 0.1182492170588132,
+    "is_new_patient": 0.13332611165569555,
+    "noshow_rate_prior": 0.004214694036422138,
+    "price_estimate": 0.029518218659225454,
+    "is_rainy": 0.023777722862189123
+  }
+}
