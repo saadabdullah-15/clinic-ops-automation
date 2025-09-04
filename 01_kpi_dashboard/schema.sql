@@ -32,3 +32,10 @@ CREATE TABLE IF NOT EXISTS payments (
   paid_at TEXT NOT NULL,
   method TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS etl_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  job TEXT NOT NULL,
+  target_date TEXT NOT NULL,
+  ran_at TEXT NOT NULL
+);

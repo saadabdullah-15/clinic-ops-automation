@@ -2,16 +2,54 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import text
 from common.db import engine
-from datetime import datetime
+from datetime import datetime, date
 import pytz
 
 st.set_page_config(page_title="Clinic KPIs", layout="wide")
 
-# today in Berlin
+# Sidebar controls
+st.sidebar.title("Controls")
 berlin = pytz.timezone("Europe/Berlin")
 today = datetime.now(berlin).date()
 
+picked_day = st.sidebar.date_input(
+    "Day", today, min_value=today.replace(year=today.year - 1), max_value=today
+)
 
+# Show last refresh info from etl_runs
+last_info = ""
+try:
+    with engine.begin() as conn:
+        df = pd.read_sql(
+            text(
+                """
+                SELECT target_date, MAX(ran_at) AS last_run
+                FROM etl_runs
+                WHERE job='refresh_daily'
+                GROUP BY target_date
+                ORDER BY target_date DESC
+                LIMIT 1
+            """
+            ),
+            conn,
+        )
+    if not df.empty:
+        last_info = (
+            f"Last refresh: {df.loc[0,'target_date']} at {df.loc[0,'last_run']} UTC"
+        )
+except Exception:
+    last_info = "No refresh history yet."
+
+st.sidebar.caption(last_info)
+
+if st.sidebar.button("Refresh KPIs now"):
+    st.cache_data.clear()
+    st.success(
+        "Cache cleared. Use your terminal to run: python -m 01_kpi_dashboard.etl.refresh_daily"
+    )
+
+
+# KPI query
 @st.cache_data(ttl=60)
 def kpis_for_day(day):
     q = """
@@ -27,11 +65,6 @@ def kpis_for_day(day):
     ),
     canceled AS (
       SELECT * FROM todays WHERE status='canceled'
-    ),
-    duration AS (
-      SELECT physio_id,
-             SUM(strftime('%s', appt_end) - strftime('%s', appt_start)) / 60.0 AS minutes
-      FROM todays GROUP BY physio_id
     )
     SELECT
       (SELECT COUNT(*) FROM todays) AS bookings,
@@ -43,7 +76,8 @@ def kpis_for_day(day):
            END) AS show_rate,
       (SELECT COALESCE(SUM(amount),0) FROM payments
          JOIN appointments a ON a.appointment_id = payments.appointment_id
-         WHERE DATE(a.appt_start) = :d) AS revenue
+         WHERE DATE(a.appt_start) = :d) AS revenue_paid,
+      (SELECT COALESCE(SUM(price_estimate),0) FROM appointments WHERE DATE(appt_start)=:d) AS revenue_estimate
     ;
     """
     with engine.begin() as conn:
@@ -63,17 +97,26 @@ def kpis_for_day(day):
     return row, util
 
 
-row, util = kpis_for_day(today)
+row, util = kpis_for_day(picked_day)
+
+# Compute utilization %
+if not util.empty:
+    util["utilization_rate"] = util["hours_scheduled"] / 8.0 * 100
 
 st.title("Clinic KPIs")
-c1, c2, c3, c4 = st.columns(4)
-c1.metric("Today bookings", int(row["bookings"]))
+c1, c2, c3, c4, c5 = st.columns(5)
+c1.metric("Bookings", int(row["bookings"]))
 c2.metric("Cancellations", int(row["cancellations"]))
 c3.metric("Show rate", f"{row['show_rate']*100:.1f}%")
-c4.metric("Revenue (paid)", f"€{row['revenue']:.2f}")
+c4.metric("Revenue (paid)", f"€{row['revenue_paid']:.2f}")
+c5.metric("Revenue (estimate)", f"€{row['revenue_estimate']:.2f}")
 
-st.subheader("Utilization per physio (hours scheduled today)")
-st.dataframe(util)
+st.subheader("Utilization per physio (hours scheduled)")
+st.dataframe(util[["full_name", "hours_scheduled"]])
+
+st.subheader("Utilization rate (%) per physio")
+if not util.empty:
+    st.bar_chart(util.set_index("full_name")["utilization_rate"])
 
 st.subheader("Last 14 days trend")
 
