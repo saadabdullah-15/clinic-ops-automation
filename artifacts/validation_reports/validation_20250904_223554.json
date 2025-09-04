@@ -1,0 +1,10 @@
+{
+  "timestamp": "2025-09-04T22:35:54.236480",
+  "failures": [],
+  "warnings": [
+    {
+      "check": "appt_overlaps",
+      "detail": "detected 139 overlaps (investigate schedule rules)"
+    }
+  ]
+}
