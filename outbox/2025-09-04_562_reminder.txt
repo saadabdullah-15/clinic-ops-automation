@@ -1,0 +1,12 @@
+To: Pat81 Smith81 <pat81_smith81.81@example.local>
+Subject: Appointment reminder for 2025-09-04 at 16:00
+
+Hi Pat81 Smith81,
+
+This is a friendly reminder of your physiotherapy appointment with Alex J
+on 2025-09-04 at 16:00.
+
+If you need to reschedule, please reply or call us so we can offer the slot to another patient in need.
+
+Thank you,
+Clinic Reception

@@ -1,5 +1,9 @@
-import argparse, pandas as pd
+import sys
 from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[2]))
+
+import argparse, pandas as pd
 from datetime import datetime
 from sqlalchemy import text
 from common.db import engine

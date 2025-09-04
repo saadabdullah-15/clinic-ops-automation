@@ -1,7 +1,12 @@
-import pandas as pd
+import sys
 from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[2]))
+
+import pandas as pd
 from sqlalchemy import text
 from common.db import engine, run_sql_file
+
 
 root = Path(__file__).resolve().parents[2]
 raw = root / "data" / "raw"
