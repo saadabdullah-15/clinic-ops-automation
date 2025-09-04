@@ -64,7 +64,7 @@ flowchart LR
   end
 
   subgraph DB
-    DB[["SQLite: clinic.db"]]:::db
+    DB[(SQLite: clinic.db)]:::db
   end
 
   subgraph Reception
@@ -95,6 +95,7 @@ flowchart LR
   classDef db fill:#d8f0ff,stroke:#0b64c0;
   classDef svc fill:#eef7e9,stroke:#3b7c2a;
   classDef file fill:#f8f8f8,stroke:#999;
+
 
 ```
 
