@@ -51,33 +51,36 @@ Migration to a stricter schema (constraints, indices, triggers). Fast validator 
 
 ```mermaid
 flowchart LR
+  %% --- Subgraphs ---
   subgraph Data
-    RAW[CSV: data/raw/*]:::file
-    DAILY[Daily drops: data/daily/YYYY-MM-DD/*]:::file
-  end
-
-  subgraph DB
-    DB[(SQLite: clinic.db)]:::db
-  end
-
-  subgraph KPI
-    ST[Streamlit Dashboard]:::svc
-  end
-
-  subgraph Reception
-    PRI[priorities_YYYY-MM-DD.csv]:::file
-    OUTBOX[outbox/*.txt]:::file
-    API[/priorities?day=YYYY-MM-DD]:::svc
+    RAW["CSV: data/raw/*"]:::file
+    DAILY["Daily drops: data/daily/YYYY-MM-DD/*"]:::file
   end
 
   subgraph Model
-    MTRAIN[train.py]:::svc
-    MSCORE[score.py]:::svc
-    MSCORES[cancellation_scores.csv]:::file
+    MTRAIN["train.py"]:::svc
+    MSCORE["score.py"]:::svc
+    MSCORES["cancellation_scores.csv"]:::file
   end
 
+  subgraph DB
+    DB[["SQLite: clinic.db"]]:::db
+  end
+
+  subgraph Reception
+    PRI["priorities_YYYY-MM-DD.csv"]:::file
+    OUTBOX["outbox/*.txt"]:::file
+    API["/priorities?day=YYYY-MM-DD"]:::svc
+  end
+
+  subgraph KPI
+    ST["Streamlit Dashboard"]:::svc
+  end
+
+  %% --- Flows ---
   RAW -->|etl/load.py| DB
   DAILY -->|etl/refresh_daily.py| DB
+
   DB -->|SQL| ST
 
   DB -->|build_priorities.py| PRI
@@ -88,9 +91,11 @@ flowchart LR
   MSCORE --> MSCORES
   MSCORES --> DAILY
 
+  %% --- Styling ---
   classDef db fill:#d8f0ff,stroke:#0b64c0;
   classDef svc fill:#eef7e9,stroke:#3b7c2a;
   classDef file fill:#f8f8f8,stroke:#999;
+
 ```
 
 ---
