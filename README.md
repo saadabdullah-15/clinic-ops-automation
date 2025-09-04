@@ -53,21 +53,24 @@ Migration to a stricter schema (constraints, indices, triggers). Fast validator 
 flowchart LR
   %% --- Subgraphs ---
   subgraph Data
+    direction LR
     RAW["CSV: data/raw/*"]:::file
     DAILY["Daily drops: data/daily/YYYY-MM-DD/*"]:::file
   end
 
   subgraph Model
+    direction LR
     MTRAIN["train.py"]:::svc
     MSCORE["score.py"]:::svc
     MSCORES["cancellation_scores.csv"]:::file
   end
 
-  subgraph DB
+  subgraph Database
     DB[(SQLite: clinic.db)]:::db
   end
 
   subgraph Reception
+    direction LR
     PRI["priorities_YYYY-MM-DD.csv"]:::file
     OUTBOX["outbox/*.txt"]:::file
     API["/priorities?day=YYYY-MM-DD"]:::svc
@@ -95,6 +98,7 @@ flowchart LR
   classDef db fill:#d8f0ff,stroke:#0b64c0;
   classDef svc fill:#eef7e9,stroke:#3b7c2a;
   classDef file fill:#f8f8f8,stroke:#999;
+
 
 
 ```
